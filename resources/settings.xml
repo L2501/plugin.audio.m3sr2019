@@ -1,0 +1,7 @@
+<settings>
+    <category label="General">
+        <setting label="Fixed view mode" type="bool" id="fixed_view_mode" default="false"/>
+        <setting label="Albums view mode" id="albums_view_mode" type="text" default="513" />
+        <setting label="Songs view mode" id="songs_view_mode" type="text" default="506" />
+    </category>
+</settings>

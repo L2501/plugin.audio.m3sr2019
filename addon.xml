@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.audio.m3sr2019" name="MP3 Streams Reloaded" version="1" provider-name="MP3 Streams">
+<addon id="plugin.audio.m3sr2019" name="MP3 Streams Reloaded" version="2" provider-name="MP3 Streams">
     <requires>
         <import addon="xbmc.python" version="2.25.0"/>
         <import addon="script.module.beautifulsoup4" />

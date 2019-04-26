@@ -4,9 +4,9 @@ import xbmcaddon
 import xbmc
 from xbmc import executebuiltin
 from xbmcgui import ListItem
-from xbmcplugin import addDirectoryItem, endOfDirectory, setResolvedUrl, setContent
+from xbmcplugin import addDirectoryItems, addDirectoryItem, endOfDirectory, setResolvedUrl, setContent
 from resources.lib.musicmp3 import musicMp3
-from resources.lib import isodate
+
 
 try:
     from urllib.parse import quote as orig_quote
@@ -29,7 +29,7 @@ plugin = routing.Plugin()
 plugin.name = addon.getAddonInfo("name")
 
 USER_DATA_DIR = xbmc.translatePath(addon.getAddonInfo("profile")).decode("utf-8")  # !!
-MEDIA_DIR = os.path.join(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path')).decode("utf-8"), 'resources', 'media')
+MEDIA_DIR = os.path.join(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo("path")).decode("utf-8"), "resources", "media")
 FANART = os.path.join(MEDIA_DIR, "fanart.jpg")
 MUSICMP3_DIR = os.path.join(USER_DATA_DIR, "musicmp3")
 if not os.path.exists(MUSICMP3_DIR):
@@ -66,7 +66,7 @@ def index():
 def musicmp3_albums_main(sort):
     for i, gnr in enumerate(musicmp3_api.gnr_ids):
         li = ListItem("{0} {1} Albums".format(sort.title(), gnr[0]))
-        li.setArt({"fanart": FANART, "icon": os.path.join(MEDIA_DIR, "genre", '{0}.jpg'.format(gnr[0].lower().replace(' ','').replace('&','_')))})
+        li.setArt({"fanart": FANART, "icon": os.path.join(MEDIA_DIR, "genre", "{0}.jpg".format(gnr[0].lower().replace(" ", "").replace("&", "_")))})
         addDirectoryItem(plugin.handle, plugin.url_for(musicmp3_albums_gnr, sort, i), li, True)
     endOfDirectory(plugin.handle)
 
@@ -82,13 +82,15 @@ def musicmp3_albums_gnr(sort, gnr):
             section = "main"
 
         li = ListItem("{0} {1} Albums".format(sort.title(), sub_gnr[0]))
-        li.setArt({"fanart": FANART, "icon": os.path.join(MEDIA_DIR, "genre", musicmp3_api.gnr_ids[int(gnr)][0].lower(),'{0}.jpg'.format(sub_gnr[0].lower().replace(' ','').replace('&','_')))})
-        addDirectoryItem(
-            plugin.handle,
-            plugin.url_for(musicmp3_main_albums, section, sub_gnr[1], sort, "0"),
-            li,
-            True,
+        li.setArt(
+            {
+                "fanart": FANART,
+                "icon": os.path.join(
+                    MEDIA_DIR, "genre", musicmp3_api.gnr_ids[int(gnr)][0].lower(), "{0}.jpg".format(sub_gnr[0].lower().replace(" ", "").replace("&", "_"))
+                ),
+            }
         )
+        addDirectoryItem(plugin.handle, plugin.url_for(musicmp3_main_albums, section, sub_gnr[1], sort, "0"), li, True)
     endOfDirectory(plugin.handle)
 
 
@@ -108,9 +110,9 @@ def musicmp3_search(cat):
         elif cat == "albums":
             albums = musicmp3_api.search(keyboardinput, cat)
             for a in albums:
-                li = ListItem("{0}[CR][COLOR=darkmagenta]{1}[/COLOR]".format(a.get("name"), a.get("artist")))
+                li = ListItem("{0}[CR][COLOR=darkmagenta]{1}[/COLOR]".format(a.get("title"), a.get("artist")))
                 li.setArt({"thumb": a.get("image"), "icon": a.get("image")})
-                li.setInfo("music", {"title": a.get("name"), "artist": a.get("artist"), "album": a.get("name"), "year": a.get("date")})
+                li.setInfo("music", {"title": a.get("title"), "artist": a.get("artist"), "album": a.get("title"), "year": a.get("date")})
                 li.setProperty("Album_Description", a.get("details"))
                 addDirectoryItem(plugin.handle, plugin.url_for(musicmp3_album, quote(a.get("link"))), li, True)
     setContent(plugin.handle, "albums")
@@ -119,7 +121,7 @@ def musicmp3_search(cat):
     endOfDirectory(plugin.handle)
 
 
-@plugin.route("/musicmp3/main_albums/<section>/<gnr_id>/<sort>/<index>/")
+@plugin.route("/musicmp3/main_albums/<section>/<gnr_id>/<sort>/<index>")
 def musicmp3_main_albums(section, gnr_id, sort, index):
     dir_items = 40
     index = int(index)
@@ -139,10 +141,10 @@ def musicmp3_main_albums(section, gnr_id, sort, index):
         context_menu.append(("Previous {0}+".format(previous_index), previous_page))
 
     for a in albums:
-        li = ListItem("{0}[CR][COLOR=darkmagenta]{1}[/COLOR]".format(a.get("name"), a.get("artist")))
+        li = ListItem("{0}[CR][COLOR=darkmagenta]{1}[/COLOR]".format(a.get("title"), a.get("artist")))
         li.setArt({"thumb": a.get("image"), "icon": a.get("image")})
         li.addContextMenuItems(context_menu)
-        li.setInfo("music", {"title": a.get("name"), "artist": a.get("artist"), "album": a.get("name"), "year": a.get("date")})
+        li.setInfo("music", {"title": a.get("title"), "artist": a.get("artist"), "album": a.get("title"), "year": a.get("date")})
         addDirectoryItem(plugin.handle, plugin.url_for(musicmp3_album, quote(a.get("link"))), li, True)
     setContent(plugin.handle, "albums")
     if fixed_view_mode:
@@ -180,9 +182,9 @@ def artists_albums(link):
     url = unquote(link)
     albums = musicmp3_api.artist_albums(url)
     for a in albums:
-        li = ListItem("{0}[CR][COLOR=darkmagenta]{1}[/COLOR]".format(a.get("name"), a.get("artist")))
+        li = ListItem("{0}[CR][COLOR=darkmagenta]{1}[/COLOR]".format(a.get("title"), a.get("artist")))
         li.setArt({"thumb": a.get("image"), "icon": a.get("image")})
-        li.setInfo("music", {"title": a.get("name"), "artist": a.get("artist"), "album": a.get("name"), "year": a.get("date")})
+        li.setInfo("music", {"title": a.get("title"), "artist": a.get("artist"), "album": a.get("title"), "year": a.get("date")})
         li.setProperty("Album_Description", a.get("details"))
         addDirectoryItem(plugin.handle, plugin.url_for(musicmp3_album, quote(a.get("link"))), li, True)
     setContent(plugin.handle, "albums")
@@ -195,15 +197,16 @@ def artists_albums(link):
 def musicmp3_album(link):
     url = unquote(link)
     tracks = musicmp3_api.album_tracks(url)
+    _directory_items = []
     for t in tracks:
-        li = ListItem(t.get("name"))
+        _infolabels = {"title": t.get("title"), "artist": t.get("artist"), "album": t.get("album"), "duration": t.get("duration")}
+        li = ListItem(t.get("title"))
         li.setProperty("IsPlayable", "true")
         li.setArt({"thumb": t.get("image"), "icon": t.get("image")})
-        li.setInfo(
-            "music",
-            {"title": t.get("name"), "artist": t.get("artist"), "album": t.get("album"), "duration": isodate.parse_duration(t.get("duration")).total_seconds()},
-        )
-        addDirectoryItem(plugin.handle, plugin.url_for(musicmp3_play, track_id=t.get("id"), rel=t.get("rel")), li, False)
+        li.setInfo("music", _infolabels)
+        _directory_items.append((plugin.url_for(musicmp3_play, track_id=t.get("track_id"), rel=t.get("rel")), li, False))
+
+    addDirectoryItems(plugin.handle, _directory_items)
     setContent(plugin.handle, "songs")
     if fixed_view_mode:
         executebuiltin("Container.SetViewMode({0})".format(songs_view_mode))
@@ -212,7 +215,11 @@ def musicmp3_album(link):
 
 @plugin.route("/musicmp3/play/<track_id>/<rel>")
 def musicmp3_play(track_id, rel):
-    li = ListItem(path=musicmp3_api.play_url(track_id, rel))
+    _track = musicmp3_api.get_track(rel)
+    _infolabels = {"title": _track.title, "artist": _track.artist, "album": _track.album, "duration": _track.duration}
+    li = ListItem(_track.title, path=musicmp3_api.play_url(track_id, rel))
+    li.setInfo("music", _infolabels)
+    li.setArt({"thumb": _track.image, "icon": _track.image})
     li.setMimeType("audio/mpeg")
     li.setContentLookup(False)
     setResolvedUrl(plugin.handle, True, li)

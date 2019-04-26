@@ -1,9 +1,11 @@
 import os
+import isodate
 import requests
 import requests_cache
 from bs4 import BeautifulSoup
-from datetime import timedelta
+from datetime import timedelta, datetime
 from urlparse import urljoin
+from peewee import *
 
 try:
     from http.cookiejar import LWPCookieJar
@@ -19,18 +21,37 @@ def quote(s, safe=""):
     return orig_quote(s.encode("utf-8"), safe.encode("utf-8"))
 
 
+db = SqliteDatabase(None)
+
+
+class BaseModel(Model):
+    class Meta:
+        database = db
+
+
+class Track(BaseModel):
+    rel = CharField(unique=True)
+    track_id = TextField()
+    image = TextField()
+    duration = TextField()
+    album = TextField()
+    artist = TextField()
+    title = TextField()
+
+
 class musicMp3:
     def __init__(self, cache_dir):
         if not os.path.exists(cache_dir):
             cache_dir = os.getcwd()
+        TRACKS_DB = os.path.join(cache_dir, "tracks.db")
         COOKIE_FILE = os.path.join(cache_dir, "lwp_cookies.dat")
+        db.init(TRACKS_DB)
+        db.connect()
+        db.create_tables([Track], safe=True)
         self.base_url = "https://musicmp3.ru/"
         self.user_agent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:66.0) Gecko/20100101 Firefox/66.0"
         self.s = requests_cache.CachedSession(
-            os.path.join(cache_dir, "cache"),
-            allowable_methods="GET",
-            expire_after=timedelta(hours=40),
-            old_data_on_error=True,
+            os.path.join(cache_dir, "cache"), allowable_methods="GET", expire_after=timedelta(hours=40), old_data_on_error=True
         )
         self.s.cookies = LWPCookieJar(filename=COOKIE_FILE)
         self.s.headers.update({"User-Agent": self.user_agent})
@@ -38,6 +59,8 @@ class musicMp3:
             self.s.cookies.load(ignore_discard=True, ignore_expires=True)
 
     def __del__(self):
+        db.close()
+        self.s.cache.remove_old_entries(datetime.utcnow() - timedelta(hours=40))
         self.s.cookies.save(ignore_discard=True, ignore_expires=True)
         self.s.close()
 
@@ -83,7 +106,7 @@ class musicMp3:
     def albums(self, s):
         for li in s.find_all("li", class_="unstyled"):
             yield {
-                "name": li.find(class_="album_report__name").get_text(strip=True),
+                "title": li.find(class_="album_report__name").get_text(strip=True),
                 "image": li.find(class_="album_report__image").get("src"),
                 "link": urljoin(self.base_url, li.find(class_="album_report__link").get("href")),
                 "artist_link": urljoin(self.base_url, li.find(class_="album_report__artist").get("href")),
@@ -93,18 +116,16 @@ class musicMp3:
 
     def search(self, text, cat):
         params = {"text": text, "all": cat}
-        r = self.s.get("https://musicmp3.ru/search.html", params=params, headers={"Referer": self.base_url})
+        r = self.s.get("https://musicmp3.ru/search.html", params=params, headers={"Referer": self.base_url}, timeout=5)
         soup = BeautifulSoup(r.text, "html.parser")
         _list = []
         if cat == "artists":
             for artist in soup.find_all(class_="artist_preview"):
-                _list.append(
-                    {"artist": artist.a.get_text(strip=True), "link": urljoin(self.base_url, artist.a.get("href"))}
-                )
+                _list.append({"artist": artist.a.get_text(strip=True), "link": urljoin(self.base_url, artist.a.get("href"))})
         elif cat == "albums":
             for album in soup.find_all(class_="album_report"):
                 album_report = {
-                    "name": album.find(class_="album_report__name").get_text(strip=True),
+                    "title": album.find(class_="album_report__name").get_text(strip=True),
                     "image": album.find(class_="album_report__image").get("src"),
                     "link": urljoin(self.base_url, album.find(class_="album_report__link").get("href")),
                     "artist_link": urljoin(self.base_url, album.find(class_="album_report__artist").get("href")),
@@ -121,8 +142,10 @@ class musicMp3:
         _list = []
         while len(_list) < count:
             params = {"type": "artist", "page": _page}
-            r = self.s.get("https://musicmp3.ru/main_artists.html", params=params, headers={"Referer": self.base_url})
+            r = self.s.get("https://musicmp3.ru/main_artists.html", params=params, headers={"Referer": self.base_url}, timeout=5)
             soup = BeautifulSoup(r.text, "html.parser")
+            if not soup.a:
+                break
             for index, item in enumerate(self.artists(soup), (_page - 1) * 80):
                 if len(_list) >= count:
                     break
@@ -141,8 +164,10 @@ class musicMp3:
                 params["gnr_id"] = gnr_id
             if section:
                 params["section"] = section
-            r = self.s.get("https://musicmp3.ru/main_albums.html", params=params)
+            r = self.s.get("https://musicmp3.ru/main_albums.html", params=params, timeout=5)
             soup = BeautifulSoup(r.text, "html.parser")
+            if not soup.li:
+                break
             for index, item in enumerate(self.albums(soup), (_page - 1) * 80):
                 if len(_list) >= count:
                     break
@@ -153,13 +178,13 @@ class musicMp3:
         return _list
 
     def artist_albums(self, url):
-        r = self.s.get(url, headers={"Referer": self.base_url})
+        r = self.s.get(url, headers={"Referer": self.base_url}, timeout=5)
         soup = BeautifulSoup(r.text, "html.parser")
         _artist = soup.find(class_="page_title__h1").get_text(strip=True)
         _list = []
         for album in soup.find_all(class_="album_report"):
             album_report = {
-                "name": album.find(class_="album_report__name").get_text(strip=True),
+                "title": album.find(class_="album_report__name").get_text(strip=True),
                 "image": album.find(class_="album_report__image").get("src"),
                 "link": urljoin(self.base_url, album.find(class_="album_report__link").get("href")),
                 "artist_link": url,
@@ -179,15 +204,24 @@ class musicMp3:
         tracks = []
         for song in soup.find_all(class_="song"):
             track = {}
-            track["name"] = song.find(itemprop="name").get_text(strip=True)
+            track["title"] = song.find(itemprop="name").get_text(strip=True)
             track["artist"] = song.find(itemprop="byArtist").get("content")
             track["album"] = song.find(itemprop="inAlbum").get("content")
-            track["duration"] = song.find(itemprop="duration").get("content")
-            track["image"] = image
-            track["id"] = song.get("id")
+            track["duration"] = str(isodate.parse_duration(song.find(itemprop="duration").get("content")).total_seconds())
+            track["image"] = self.image_url(image)
+            track["track_id"] = song.get("id")
             track["rel"] = song.a.get("rel")[0]
             tracks.append(track)
+
+        with db.atomic():
+            Track.replace_many(tracks).execute()
         return tracks
+
+    def get_track(self, rel):
+        try:
+            return Track.get(Track.rel == rel)
+        except:
+            return Track()
 
     gnr_ids = [
         (
@@ -414,14 +448,7 @@ class musicMp3:
         ),
         (
             "Blues",
-            [
-                ("Blues", "774"),
-                ("Acoustic Blues", "775"),
-                ("Electric Blues", "780"),
-                ("Piano Blues", "784"),
-                ("Blues Rock", "786"),
-                ("Compilations", "774"),
-            ],
+            [("Blues", "774"), ("Acoustic Blues", "775"), ("Electric Blues", "780"), ("Piano Blues", "784"), ("Blues Rock", "786"), ("Compilations", "774")],
         ),
         (
             "Soundtracks",

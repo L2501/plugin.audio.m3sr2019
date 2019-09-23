@@ -135,11 +135,13 @@ class musicMp3:
                 _list.append(album_report)
         return _list
 
-    def main_artists(self, start, count):
+    def main_artists(self, gnr_id, start, count):
         _page = 1 + start // 80
         _list = []
         while len(_list) < count:
             params = {"type": "artist", "page": _page}
+            if not gnr_id == "0":
+                params["gnr_id"] = gnr_id
             r = self.s.get(
                 "https://musicmp3.ru/main_artists.html", params=params, headers={"Referer": self.base_url}, timeout=5
             )

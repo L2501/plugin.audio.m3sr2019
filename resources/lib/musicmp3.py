@@ -1,19 +1,29 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2019 L2501
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import unicode_literals
+
 import os
-import isodate
 import requests
 from bs4 import BeautifulSoup
-from datetime import timedelta, datetime
-from urlparse import urljoin
-from peewee import *
-
-try:
-    from http.cookiejar import LWPCookieJar
-except ImportError:
-    from cookielib import LWPCookieJar
-try:
-    from urllib.parse import quote_from_bytes as orig_quote
-except ImportError:
-    from urllib import quote as orig_quote
+from .peewee import *
+from . import isodate
+from future.moves.urllib.parse import urljoin
+from future.backports.urllib.parse import quote_from_bytes as orig_quote
+from http.cookiejar import LWPCookieJar
 
 
 def quote(s, safe=""):
@@ -48,7 +58,7 @@ class musicMp3:
         db.connect()
         db.create_tables([Track], safe=True)
         self.base_url = "https://musicmp3.ru/"
-        self.user_agent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:66.0) Gecko/20100101 Firefox/66.0"
+        self.user_agent = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:66.0) Gecko/20100101 Firefox/68.0"
         self.s = requests.Session()
         self.s.cookies = LWPCookieJar(filename=COOKIE_FILE)
         self.s.headers.update({"User-Agent": self.user_agent})

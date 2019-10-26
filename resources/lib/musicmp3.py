@@ -101,7 +101,7 @@ class musicMp3:
         return ("0000" + hex(a)[2:])[len(d) - 4 :] + ("0000" + hex(b)[2:])[len(c) - 4 :]
 
     def play_url(self, track_id, rel):
-        return "https://listen.musicmp3.ru/{0}/{1}|seekable=0&User-Agent={2}&Referer={3}".format(
+        return "https://listen.musicmp3.ru/{0}/{1}|seekable=0&verifypeer=false&User-Agent={2}&Referer={3}".format(
             self.boo(track_id), rel, quote(self.user_agent), quote(self.base_url)
         )
 

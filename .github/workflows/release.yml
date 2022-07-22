@@ -1,0 +1,60 @@
+on:
+  push:
+    tags:
+    - 'v*'
+
+name: Upload Release Asset
+
+jobs:
+  build:
+    env:
+      ADDON_ID: "plugin.audio.m3sr2019"
+      GITHUB_REF: ${{ github.ref }}
+    name: Upload Release Asset
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - name: Create zip name
+        id: create_name
+        run: echo ::set-output name=zip_name::${ADDON_ID}-${GITHUB_REF#refs/tags/v}.zip
+      - name: Create zip name Kodi 19
+        id: create_name_19
+        run: echo ::set-output name=zip_name::${ADDON_ID}-${GITHUB_REF#refs/tags/v}+matrix.1.zip
+      - name: Build project
+        working-directory: .
+        run: |
+          git archive --prefix=${ADDON_ID}/ -o artifact.zip -9 HEAD
+          cp artifact.zip artifact-matrix.zip
+          cd matrix && zip -r ../artifact-matrix.zip ${ADDON_ID}/addon.xml
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifact.zip
+          asset_name: ${{ steps.create_name.outputs.zip_name }}
+          asset_content_type: application/zip
+      - name: Upload Release Asset Kodi 19
+        id: upload-release-asset-19
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifact-matrix.zip
+          asset_name: ${{ steps.create_name_19.outputs.zip_name }}
+          asset_content_type: application/zip
+

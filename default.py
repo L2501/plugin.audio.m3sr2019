@@ -24,6 +24,11 @@ from resources.lib.musicmp3 import musicMp3, gnr_ids
 from future.backports.urllib.parse import quote_from_bytes as orig_quote
 from future.backports.urllib.parse import unquote_to_bytes as orig_unquote
 
+try:
+    from xbmcvfs import translatePath
+except ImportError:
+    from kodi_six.xbmc import translatePath
+
 
 def quote(s, safe=""):
     return orig_quote(s.encode("utf-8"), safe.encode("utf-8"))
@@ -37,8 +42,8 @@ addon = xbmcaddon.Addon()
 plugin = Plugin()
 plugin.name = addon.getAddonInfo("name")
 
-USER_DATA_DIR = xbmc.translatePath(addon.getAddonInfo("profile"))
-MEDIA_DIR = os.path.join(xbmc.translatePath(xbmcaddon.Addon().getAddonInfo("path")), "resources", "media")
+USER_DATA_DIR = translatePath(addon.getAddonInfo("profile"))
+MEDIA_DIR = os.path.join(translatePath(xbmcaddon.Addon().getAddonInfo("path")), "resources", "media")
 FANART = os.path.join(MEDIA_DIR, "fanart.jpg")
 MUSICMP3_DIR = os.path.join(USER_DATA_DIR, "musicmp3")
 if not os.path.exists(MUSICMP3_DIR):
